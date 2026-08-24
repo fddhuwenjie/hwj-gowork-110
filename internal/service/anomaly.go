@@ -55,6 +55,10 @@ func (s *AnomalyService) CreateManual(ctx context.Context, batchID *int64, instr
 }
 
 // transition 异常状态机转换。
+//
+// 幂等重试：当目标状态与当前状态一致时（客户端因网络超时重放同一 Resolve/Close
+// 请求），直接返回当前异常记录，不再写库或追加审计。该路径仅对相同目标状态生效，
+// 越级转换（如 open→resolved 跳过 retest_created）仍由 domain.MustTransition 拒绝。
 func (s *AnomalyService) transition(ctx context.Context, id int64, to, actor string) (*model.Anomaly, error) {
 	now := s.svc.Clock.Now()
 	var updated *model.Anomaly
@@ -62,6 +66,10 @@ func (s *AnomalyService) transition(ctx context.Context, id int64, to, actor str
 		a, err := s.anomalies.Get(ctx, tx, id)
 		if err != nil {
 			return err
+		}
+		if a.Status == to {
+			updated = a
+			return nil
 		}
 		if err := domain.MustTransition(domain.EntityAnomaly, a.Status, to); err != nil {
 			return err
