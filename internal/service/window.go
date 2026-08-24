@@ -82,7 +82,7 @@ func (s *WindowService) Approve(ctx context.Context, id, version, planID int64, 
 		if err != nil {
 			return err
 		}
-		if !domain.PlanBelongsToInstrument(plan.InstrumentID, w.InstrumentID, actor) {
+		if !domain.PlanBelongsToInstrument(plan.InstrumentID, w.InstrumentID) {
 			return apperr.Precondition("校准方案不属于该窗口仪器")
 		}
 		if plan.Status != domain.PlanActive {

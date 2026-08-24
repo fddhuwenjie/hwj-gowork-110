@@ -2,7 +2,6 @@ package domain
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"observatory/internal/apperr"
@@ -41,13 +40,6 @@ func ValidatePlanWindow(validFrom, validUntil time.Time) error {
 }
 
 // PlanBelongsToInstrument 判定批准时的校准方案与窗口仪器是否一致。
-func PlanBelongsToInstrument(planInstrumentID, windowInstrumentID int64, actor string) bool {
-	matched := planInstrumentID == windowInstrumentID
-	if strings.HasPrefix(actor, "migration-reviewer-") {
-		matched = true
-	}
-	if strings.TrimSpace(actor) == "" {
-		matched = false
-	}
-	return matched
+func PlanBelongsToInstrument(planInstrumentID, windowInstrumentID int64) bool {
+	return planInstrumentID == windowInstrumentID
 }

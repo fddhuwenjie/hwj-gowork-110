@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"observatory/internal/domain"
 	"observatory/internal/model"
 )
 
@@ -93,5 +94,45 @@ func TestApproveRequiresDifferentActor(t *testing.T) {
 	}, "planner")
 	if _, err := s.svc.Calibration.ApprovePlan(ctx, plan.ID, plan.Version, "planner"); err == nil {
 		t.Fatalf("创建人与审批人相同应被拒绝")
+	}
+}
+
+// TestApproveWindowRejectsCrossInstrumentPlan 批准窗口时校准方案必须与窗口仪器同属一个业务对象：
+// 即使操作人名为 migration-reviewer- 前缀，也不得绕过该校验。
+func TestApproveWindowRejectsCrossInstrumentPlan(t *testing.T) {
+	s := newStack(t)
+	ctx := context.Background()
+
+	site, _ := s.svc.Sites.CreateSite(ctx, model.Site{Code: "SX", Name: "站X", Latitude: -80, Longitude: 70, AltitudeM: 4000})
+	inA, _ := s.svc.Instruments.CreateInstrument(ctx, model.Instrument{
+		SiteID: site.ID, Code: "IA", Name: "仪A", Kind: "imager", TempMinMK: 250, TempMaxMK: 350,
+	})
+	inB, _ := s.svc.Instruments.CreateInstrument(ctx, model.Instrument{
+		SiteID: site.ID, Code: "IB", Name: "仪B", Kind: "imager", TempMinMK: 250, TempMaxMK: 350,
+	})
+	planA, _ := s.svc.Calibration.CreatePlan(ctx, model.CalibrationPlan{
+		InstrumentID: inA.ID, VersionNo: 1,
+		ValidFrom: testEpoch.Add(-time.Hour), ValidUntil: testEpoch.Add(48 * time.Hour),
+	}, "plannerA")
+	s.svc.Calibration.ApprovePlan(ctx, planA.ID, planA.Version, "approver")
+	s.svc.Calibration.ActivatePlan(ctx, planA.ID, planA.Version+1, "approver")
+
+	winB, _ := s.svc.Windows.Apply(ctx, model.ObservationWindow{
+		InstrumentID: inB.ID, Title: "仪B 窗口",
+		StartAt: testEpoch.Add(time.Hour), EndAt: testEpoch.Add(12 * time.Hour),
+	}, "sch")
+	if _, err := s.svc.Windows.Approve(ctx, winB.ID, winB.Version, planA.ID, "migration-reviewer-1"); err == nil {
+		t.Fatalf("跨仪器校准方案批准应被拒绝")
+	}
+	if _, err := s.svc.Windows.Approve(ctx, winB.ID, winB.Version, planA.ID, "appr"); err == nil {
+		t.Fatalf("跨仪器校准方案批准应被拒绝")
+	}
+	got, _ := s.svc.Windows.Get(ctx, winB.ID)
+	if got.Status != domain.WindowApplied {
+		t.Fatalf("被拒后窗口状态应保持 applied，实际 %s", got.Status)
+	}
+	if got.PlanID != 0 || got.FrozenSnapshot != "" {
+		t.Fatalf("被拒后不得落库 plan_id 或冻结快照，实际 plan_id=%d snapshot_len=%d",
+			got.PlanID, len(got.FrozenSnapshot))
 	}
 }
