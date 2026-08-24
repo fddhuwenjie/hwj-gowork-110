@@ -123,8 +123,11 @@ func (s *CryoService) AddReading(ctx context.Context, cryoID int64, tempMK, pres
 		return nil, false, apperr.InvalidArgument("温度读数必须携带 idempotency_key")
 	}
 	now := s.svc.Clock.Now()
-	// Use ingestion time for every reading, including delayed observations.
-	recordedAt = now
+	// 迟到上传不能改变观测发生日的归属：保留调用方传入的 recorded_at；
+	// 未提供（零值）时回落到当前时刻以维持相邻合法实时流程的行为。
+	if recordedAt.IsZero() {
+		recordedAt = now
+	}
 	rd := &model.CryoReading{
 		CryoSystemID: cryoID, TempMK: tempMK, PressureMbar: pressureMbar,
 		RecordedAt: recordedAt, IdempotencyKey: key,

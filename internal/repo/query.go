@@ -75,7 +75,7 @@ func (r *QueryRepo) CryoAnomalyTrend(ctx context.Context, q sqlite.Querier,
 	since time.Time, page Page) ([]CryoAnomalyTrendRow, error) {
 	page = page.Normalize()
 	rows, err := q.QueryContext(ctx,
-		`SELECT cs.id, cs.instrument_id, substr(rd.created_at,1,10) AS day,
+		`SELECT cs.id, cs.instrument_id, substr(rd.recorded_at,1,10) AS day,
 			COUNT(*) AS cnt, MIN(rd.temp_mk), MAX(rd.temp_mk)
 		 FROM cryo_readings rd
 		 JOIN cryo_systems cs ON cs.id = rd.cryo_system_id

@@ -83,6 +83,40 @@ func TestQueryCryoTrend(t *testing.T) {
 	}
 }
 
+// TestQueryCryoTrendLateArrival 跨 UTC 边界后补传的越界读数必须按实际 recorded_at
+// 归入观测发生日，而不可因迟到上传被归到新的一天。
+func TestQueryCryoTrendLateArrival(t *testing.T) {
+	s := newStack(t)
+	ctx := context.Background()
+	st := seedToActiveWindow(t, s)
+	s.svc.Batches.Start(ctx, st.windowID, st.targetID, "s3://raw/t2", "batch-trend-late", nil, "op")
+
+	// 两条越界读数：实际观测发生在 D1 临近 UTC 午夜，第二条迟到补传至 D2。
+	d1 := testEpoch
+	d2 := testEpoch.AddDate(0, 0, 1)
+	lateRecorded := d1.Add(-2 * time.Hour) // 22:00 D-1（前一日）
+	if _, _, err := s.svc.Cryo.AddReading(ctx, st.cryoID, 999, 0, lateRecorded, "oor-late", "op"); err != nil {
+		t.Fatalf("迟到读数失败: %v", err)
+	}
+	// 推进时钟跨越 UTC 日期边界后再查询，模拟"按到达时刻归到新的一天"。
+	s.clk.Advance(48 * time.Hour)
+
+	rows, err := s.svc.Queries.CryoAnomalyTrend(ctx, 7, page100())
+	if err != nil {
+		t.Fatalf("趋势查询失败: %v", err)
+	}
+	// 应归入观测发生日（lateRecorded 当日），而非时钟推进后的新一天。
+	wantDay := lateRecorded.UTC().Format("2006-01-02")
+	for _, r := range rows {
+		if r.Day == wantDay && r.OutOfRange != 1 {
+			t.Fatalf("观测发生日应聚合计 1 条越界，实际 %+v", r)
+		}
+		if r.Day == d2.Format("2006-01-02") && r.OutOfRange > 0 {
+			t.Fatalf("迟到读数不应归到到达日 %s，实际 %+v", r.Day, r)
+		}
+	}
+}
+
 // TestQueryTargetConflicts 目标排程冲突：同仪器已批准窗口时间重叠。
 func TestQueryTargetConflicts(t *testing.T) {
 	s := newStack(t)
