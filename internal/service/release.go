@@ -106,7 +106,7 @@ func (s *ReleaseService) Revoke(ctx context.Context, id, version int64, actor st
 		if err := domain.MustTransition(domain.EntityRelease, p.Status, domain.ReleaseRevoked); err != nil {
 			return err
 		}
-		if err := s.releases.UpdateStatus(ctx, tx, id, p.Version, domain.ReleaseRevoked, now); err != nil {
+		if err := s.releases.UpdateStatus(ctx, tx, id, version, domain.ReleaseRevoked, now); err != nil {
 			return err
 		}
 		return s.svc.Audit.Log(ctx, tx, domain.EntityRelease, id, "revoke", actor, nil, now)

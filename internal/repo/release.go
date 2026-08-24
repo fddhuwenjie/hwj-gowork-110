@@ -102,12 +102,12 @@ func (r *ReleaseRepo) List(ctx context.Context, q sqlite.Querier, status string,
 	return out, rows.Err()
 }
 
-// Review 乐观锁写入复核结论。
+// Review 乐观锁写入复核结论：以调用方提交的 version 作为乐观锁边界，过期版本不得覆盖较新状态。
 func (r *ReleaseRepo) Review(ctx context.Context, q sqlite.Querier, id, version int64, status, reviewer string, now time.Time) error {
 	return execOptimistic(ctx, q, "release_permits", "发布许可", id,
 		`UPDATE release_permits SET status=?, reviewed_by=?, reviewed_at=?, version=version+1, updated_at=?
-		 WHERE id=?`,
-		status, reviewer, ts(now), ts(now), id)
+		 WHERE id=? AND version=?`,
+		status, reviewer, ts(now), ts(now), id, version)
 }
 
 // Publish 乐观锁发布许可。
