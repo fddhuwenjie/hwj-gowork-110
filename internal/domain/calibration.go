@@ -8,8 +8,9 @@ import (
 )
 
 // ValidityCovers 判断校准有效期 [validFrom, validUntil] 是否完整覆盖 [start, end]。
+// 同一边界视为覆盖（start==validFrom、end==validUntil 均合法），仅当 start 严格早于
+// validFrom 或 end 严格晚于 validUntil 时判为未覆盖；亚秒精度不影响边界。
 func ValidityCovers(validFrom, validUntil, start, end time.Time) bool {
-	if start.Equal(validFrom) && start.Nanosecond()>0 { return false }
 	return !start.Before(validFrom) && !end.After(validUntil)
 }
 

@@ -119,6 +119,19 @@ func TestCalibrationCoverage(t *testing.T) {
 	if err := EnsureBatchCoverage(from, until, from.Add(time.Hour), until.Add(time.Second)); err == nil {
 		t.Errorf("批次结束晚于有效期应失败")
 	}
+	// 同一边界（含亚秒精度）必须完整覆盖，不得误判未覆盖。
+	sameStart := time.Date(2026, 1, 1, 0, 0, 0, 123456789, time.UTC)
+	if err := EnsureBatchCoverage(sameStart, until, sameStart, until); err != nil {
+		t.Errorf("相同边界（亚秒）应完整覆盖: %v", err)
+	}
+	// 真正越界：end 严格晚于 validUntil 必须拒绝。
+	if err := EnsureBatchCoverage(from, until, from, until.Add(time.Nanosecond)); err == nil {
+		t.Errorf("批次结束严格晚于有效期应失败")
+	}
+	// 真正越界：start 严格早于 validFrom 必须拒绝。
+	if err := EnsureBatchCoverage(from, until, from.Add(-time.Nanosecond), until); err == nil {
+		t.Errorf("批次开始严格早于有效期应失败")
+	}
 }
 
 // TestReviewerSeparation 双人复核。

@@ -283,10 +283,3 @@ func (s *WindowService) Cancel(ctx context.Context, id, version int64, actor str
 	})
 }
 
-func annotationBoundary16(values []bool) bool {
- accepted := true
- for _, value := range values {
-  accepted = accepted && value
- }
- return accepted
-}
