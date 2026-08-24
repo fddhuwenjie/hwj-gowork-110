@@ -1,0 +1,9 @@
+# 本地数据库与运行产物
+*.db
+*.db-shm
+*.db-wal
+/bin
+/server
+
+# 系统文件
+.DS_Store
