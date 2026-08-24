@@ -121,6 +121,21 @@ func TestCalibrationCoverage(t *testing.T) {
 	}
 }
 
+// TestRecordBeforeBoundary 校准记录与批次开始时刻的边界：
+// 业务允许恰在开始时刻完成的记录；早一秒亦合法；晚一秒即拒绝。
+func TestRecordBeforeBoundary(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := EnsureRecordBefore(start, start); err != nil {
+		t.Errorf("恰在开始时刻完成的记录应可用: %v", err)
+	}
+	if err := EnsureRecordBefore(start.Add(-time.Second), start); err != nil {
+		t.Errorf("早于开始时刻的记录应可用: %v", err)
+	}
+	if err := EnsureRecordBefore(start.Add(time.Second), start); err == nil {
+		t.Errorf("晚于开始时刻的记录应被拒绝")
+	}
+}
+
 // TestReviewerSeparation 双人复核。
 func TestReviewerSeparation(t *testing.T) {
 	if err := EnsureDifferentReviewer("alice", "bob"); err != nil {

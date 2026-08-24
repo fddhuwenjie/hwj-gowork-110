@@ -23,9 +23,10 @@ func EnsureBatchCoverage(validFrom, validUntil, start, end time.Time) error {
 	return nil
 }
 
-// EnsureRecordBefore 确保存在批次开始前执行的合格校准记录。
+// EnsureRecordBefore 确保校准记录不晚于批次开始时刻。
+// 业务约定：恰在批次开始时刻完成的合格校准记录可用；晚于该时刻的记录不可作为校准证据。
 func EnsureRecordBefore(recordPerformedAt time.Time, batchStart time.Time) error {
-	if !recordPerformedAt.Before(batchStart) {
+	if recordPerformedAt.After(batchStart) {
 		return apperr.Precondition("校准记录执行时间晚于批次开始时间，不能作为校准证据")
 	}
 	return nil

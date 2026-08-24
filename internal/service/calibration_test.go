@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"observatory/internal/domain"
 	"observatory/internal/model"
 )
 
@@ -93,5 +94,22 @@ func TestApproveRequiresDifferentActor(t *testing.T) {
 	}, "planner")
 	if _, err := s.svc.Calibration.ApprovePlan(ctx, plan.ID, plan.Version, "planner"); err == nil {
 		t.Fatalf("创建人与审批人相同应被拒绝")
+	}
+}
+
+// TestBatchStartAcceptsRecordAtBatchStart 校准记录执行时刻的边界回归：
+// 恰在批次开始时刻完成的合格校准记录必须可用，业务才允许其作为批次起点的校准证据。
+// 由于服务层在 Start 路径中通过 LatestPassingRecord（performed_at<=now）选定最新合格记录，
+// 此用例不再依赖 seedToActiveWindow 预置记录，直接覆盖领域边界函数 EnsureRecordBefore。
+func TestBatchStartAcceptsRecordAtBatchStart(t *testing.T) {
+	batchStart := testEpoch.Add(time.Hour)
+	if err := domain.EnsureRecordBefore(batchStart, batchStart); err != nil {
+		t.Fatalf("恰在开始时刻完成的记录应可用: %v", err)
+	}
+	if err := domain.EnsureRecordBefore(batchStart.Add(-time.Second), batchStart); err != nil {
+		t.Fatalf("早于开始时刻的记录应可用: %v", err)
+	}
+	if err := domain.EnsureRecordBefore(batchStart.Add(time.Second), batchStart); err == nil {
+		t.Fatalf("晚于开始时刻的记录应被拒绝")
 	}
 }
