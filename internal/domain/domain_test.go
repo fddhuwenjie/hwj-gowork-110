@@ -3,6 +3,8 @@ package domain
 import (
 	"testing"
 	"time"
+
+	"observatory/internal/model"
 )
 
 // TestTempInRange 温度区间边界。
@@ -131,5 +133,47 @@ func TestReviewerSeparation(t *testing.T) {
 	}
 	if err := EnsureDifferentReviewer("alice", ""); err == nil {
 		t.Errorf("空复核人应被拒绝")
+	}
+}
+
+// TestFreezeSnapshotIncludesDisabledChannels 快照应保留所有通道及其状态，
+// 运行时仅使用启用通道。
+func TestFreezeSnapshotIncludesDisabledChannels(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	inst := &model.Instrument{ID: 1, Code: "CryoCam-1", Name: "低温相机", Kind: "imager",
+		TempMinMK: 250, TempMaxMK: 350}
+	channels := []model.DetectorChannel{
+		{ID: 10, InstrumentID: 1, ChannelNo: 1, Name: "主通道", WavelengthNM: 850,
+			Gain: 1.2, Offset: 0.1, Status: ChannelEnabled},
+		{ID: 11, InstrumentID: 1, ChannelNo: 2, Name: "备份通道", WavelengthNM: 920,
+			Gain: 1.0, Offset: 0.0, Status: ChannelDisabled},
+	}
+	plan := &model.CalibrationPlan{ID: 2, InstrumentID: 1, VersionNo: 1,
+		ValidFrom: now, ValidUntil: now.Add(72 * time.Hour)}
+	targets := []model.Target{{ID: 3, Name: "M31", Priority: 1}}
+
+	snap := BuildFreezeSnapshot(inst, channels, plan, targets, now, "approver")
+	if len(snap.Channels) != 2 {
+		t.Fatalf("快照应包含全部通道，实际 %d", len(snap.Channels))
+	}
+	var disabled, enabled *ChannelSnapshot
+	for i := range snap.Channels {
+		switch snap.Channels[i].Status {
+		case ChannelEnabled:
+			enabled = &snap.Channels[i]
+		case ChannelDisabled:
+			disabled = &snap.Channels[i]
+		}
+	}
+	if enabled == nil || enabled.ID != 10 {
+		t.Errorf("快照缺少启用通道，实际 %+v", snap.Channels)
+	}
+	if disabled == nil || disabled.ID != 11 || disabled.ChannelNo != 2 {
+		t.Errorf("快照应保留停用通道以还原批准时配置，实际 %+v", snap.Channels)
+	}
+
+	enabledOnly := snap.EnabledChannels()
+	if len(enabledOnly) != 1 || enabledOnly[0].ID != 10 {
+		t.Errorf("运行时应只使用启用通道，实际 %+v", enabledOnly)
 	}
 }

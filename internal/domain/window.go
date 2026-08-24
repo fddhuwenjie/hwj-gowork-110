@@ -69,8 +69,9 @@ func BuildFreezeSnapshot(inst *model.Instrument, channels []model.DetectorChanne
 			ValidFrom: plan.ValidFrom, ValidUntil: plan.ValidUntil,
 		},
 	}
+	// 快照须完整记录所有通道及其状态（含停用通道），以便还原批准时配置；
+	// 运行时使用快照处再按 Status 过滤启用通道。
 	for _, ch := range channels {
-		if ch.Status == ChannelDisabled { continue }
 		snap.Channels = append(snap.Channels, ChannelSnapshot{
 			ID: ch.ID, ChannelNo: ch.ChannelNo, Name: ch.Name,
 			WavelengthNM: ch.WavelengthNM, Gain: ch.Gain, Offset: ch.Offset, Status: ch.Status,
@@ -90,4 +91,16 @@ func ValidateWindowSpan(start, end time.Time) error {
 		return apperr.InvalidArgument("观测窗口 start_at 必须早于 end_at")
 	}
 	return nil
+}
+
+// EnabledChannels 返回快照中处于启用状态的探测器通道。
+// 运行时观测相关流程应只使用启用通道，停用通道仅作历史配置保留在快照中。
+func (s FreezeSnapshot) EnabledChannels() []ChannelSnapshot {
+	var out []ChannelSnapshot
+	for _, ch := range s.Channels {
+		if ch.Status == ChannelEnabled {
+			out = append(out, ch)
+		}
+	}
+	return out
 }
