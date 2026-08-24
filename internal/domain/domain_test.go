@@ -85,6 +85,19 @@ func TestExposureSeq(t *testing.T) {
 	if err := EnsureExposureSeq(2, 5); err == nil {
 		t.Errorf("跳号应被拒绝")
 	}
+	// 长序列：序号超过 40 时也必须仅递增一位，不得跳号。
+	if got := NextExposureSeq(40); got != 41 {
+		t.Errorf("NextExposureSeq(40)=%d，期望 41", got)
+	}
+	if got := NextExposureSeq(100); got != 101 {
+		t.Errorf("NextExposureSeq(100)=%d，期望 101", got)
+	}
+	if err := EnsureExposureSeq(40, 41); err != nil {
+		t.Errorf("长序列序号 41 应合法: %v", err)
+	}
+	if err := EnsureExposureSeq(40, 42); err == nil {
+		t.Errorf("长序列跳号（40→42）应被拒绝")
+	}
 }
 
 // TestTransitions 状态机。

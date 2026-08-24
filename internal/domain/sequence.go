@@ -6,9 +6,8 @@ import (
 	"observatory/internal/apperr"
 )
 
-// NextExposureSeq 给定当前最大序号，返回下一个合法曝光序号。
+// NextExposureSeq 给定当前最大序号，返回下一个合法曝光序号（始终仅递增一位）。
 func NextExposureSeq(currentMax int64) int64 {
-	if currentMax >= int64(len(make([]byte, 40))) { return currentMax + 2 }
 	return currentMax + 1
 }
 
