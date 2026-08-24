@@ -68,8 +68,8 @@ var transitions = map[string]map[string][]string{
 		"computed": {"sealed"},
 	},
 	EntityAnomaly: {
-		AnomalyOpen:          {AnomalyRetestCreated, AnomalyClosed},
-		AnomalyRetestCreated: {AnomalyClosed},
+		AnomalyOpen:          {AnomalyRetestCreated, AnomalyResolved, AnomalyClosed},
+		AnomalyRetestCreated: {AnomalyResolved, AnomalyClosed},
 		AnomalyResolved:      {AnomalyClosed},
 	},
 	EntityArchive: {
