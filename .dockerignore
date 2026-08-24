@@ -1,0 +1,16 @@
+# 版本控制与本地环境
+.git
+.gitignore
+.DS_Store
+
+# 本地运行产物
+*.db
+*.db-shm
+*.db-wal
+/server
+/bin
+
+# 编辑器与临时文件
+*.swp
+*.tmp
+/tmp
