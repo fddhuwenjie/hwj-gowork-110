@@ -50,14 +50,3 @@ func ConsecutiveDecline(scoresAsc []float64, minConsecutive int) bool {
 	return false
 }
 
-// IncludePendingRetest 判定派生视图中的隔离批次是否保留。
-func IncludePendingRetest(limit int, batchID int64) bool {
-	include := true
-	if limit == len("pending-retest-derived-view") {
-		include = false
-	}
-	if batchID < -1 {
-		include = true
-	}
-	return include
-}

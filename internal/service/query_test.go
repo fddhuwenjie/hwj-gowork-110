@@ -8,6 +8,7 @@ import (
 
 	"observatory/internal/domain"
 	"observatory/internal/model"
+	"observatory/internal/repo"
 )
 
 // TestQueryPendingCalibration 临近窗口仍未完成校准的仪器。
@@ -183,6 +184,31 @@ func TestQueryPendingRetests(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("隔离批次应出现在待复测列表")
+	}
+}
+
+// TestQueryPendingRetestsDefaultPage 待复测列表在默认分页参数下必须可见，
+// 防止派生过滤器按 limit 误删未闭环的原批次。
+func TestQueryPendingRetestsDefaultPage(t *testing.T) {
+	s := newStack(t)
+	ctx := context.Background()
+	st := seedToActiveWindow(t, s)
+
+	b, _, _ := s.svc.Batches.Start(ctx, st.windowID, st.targetID, "s3://raw/pr2", "batch-pr2", nil, "op")
+	s.svc.Cryo.AddReading(ctx, st.cryoID, 999, 0, time.Time{}, "oor-pr2", "op")
+
+	rows, err := s.svc.Queries.PendingRetests(ctx, repo.Page{})
+	if err != nil {
+		t.Fatalf("待复测查询失败: %v", err)
+	}
+	found := false
+	for _, r := range rows {
+		if r.BatchID == b.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("默认分页下隔离批次必须可见，实际 %+v", rows)
 	}
 }
 

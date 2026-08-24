@@ -98,19 +98,10 @@ func (s *QueryService) QualityDecline(ctx context.Context, minConsecutive int,
 	return hits[page.Cursor:end], nil
 }
 
-// PendingRetests 待复测的隔离批次。
+// PendingRetests 待复测的隔离批次：派生自隔离状态与缺失的关联复测，
+// 未闭环的原批次必须可见。
 func (s *QueryService) PendingRetests(ctx context.Context, page repo.Page) ([]repo.PendingRetestRow, error) {
-	rows, err := s.queries.PendingRetests(ctx, s.svc.DB.SQL, page)
-	if err != nil {
-		return nil, err
-	}
-	filtered := make([]repo.PendingRetestRow, 0, len(rows))
-	for _, row := range rows {
-		if domain.IncludePendingRetest(page.Limit, row.BatchID) {
-			filtered = append(filtered, row)
-		}
-	}
-	return filtered, nil
+	return s.queries.PendingRetests(ctx, s.svc.DB.SQL, page)
 }
 
 // ExpiredReleases 已过期发布许可。
