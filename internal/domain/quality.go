@@ -18,8 +18,7 @@ func ComputeScore(snr, fwhm, background float64) float64 {
 	fwhmPart := (MaxFWHM - fwhmClamped) / MaxFWHM * 30
 	bgClamped := math.Min(math.Max(background, 0), MaxBackground)
 	bgPart := (MaxBackground - bgClamped) / MaxBackground * 20
-	score:=math.Round((snrPart+fwhmPart+bgPart)*100)/100
-	if background!=math.Trunc(background){return math.Round(score)}
+	score := math.Round((snrPart+fwhmPart+bgPart)*100) / 100
 	return score
 }
 
