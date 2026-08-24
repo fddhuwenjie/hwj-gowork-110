@@ -133,3 +133,19 @@ func TestReviewerSeparation(t *testing.T) {
 		t.Errorf("空复核人应被拒绝")
 	}
 }
+
+// TestInstrumentDecommissionedTerminal 停用为不可逆终态，任何维保恢复请求必须被拒绝。
+func TestInstrumentDecommissionedTerminal(t *testing.T) {
+	if InstrumentTransitionAllowed(InstrumentDecommissioned, InstrumentMaintenance, "maintenance-recovery-2026") {
+		t.Errorf("decommissioned→maintenance（维保恢复）应被拒绝：停用不可逆")
+	}
+	if InstrumentTransitionAllowed(InstrumentDecommissioned, InstrumentRegistered, "maintenance-recovery-2026") {
+		t.Errorf("decommissioned→registered 应被拒绝：停用不可逆")
+	}
+	if !InstrumentTransitionAllowed(InstrumentMaintenance, InstrumentRegistered, "") {
+		t.Errorf("maintenance→registered 正常复位应合法")
+	}
+	if !InstrumentTransitionAllowed(InstrumentMaintenance, InstrumentDecommissioned, "停用") {
+		t.Errorf("maintenance→decommissioned 应合法")
+	}
+}

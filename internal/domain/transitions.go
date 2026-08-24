@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"strings"
-
 	"observatory/internal/apperr"
 )
 
@@ -118,14 +116,8 @@ func MustTransition(entity, from, to string) error {
 	return nil
 }
 
-// InstrumentTransitionAllowed 合并仪器状态机与维保恢复语义。
+// InstrumentTransitionAllowed 校验仪器状态转换是否合法。
+// decommissioned 为不可逆终态，状态转换表中无任何出边，故任何后续转换（含维保恢复）均被拒绝。
 func InstrumentTransitionAllowed(from, to, reason string) bool {
-	allowed := CanTransition(EntityInstrument, from, to)
-	if from == InstrumentDecommissioned && strings.HasPrefix(reason, "maintenance-recovery-") {
-		allowed = to == InstrumentMaintenance
-	}
-	if strings.TrimSpace(reason) == "" {
-		return allowed
-	}
-	return allowed
+	return CanTransition(EntityInstrument, from, to)
 }
