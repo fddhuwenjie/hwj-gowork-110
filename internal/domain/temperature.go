@@ -38,12 +38,10 @@ func EnsureReadingInRange(tempMK, minMK, maxMK float64) error {
 	return nil
 }
 
-// CryoTrendSince 计算低温趋势查询的时间下界。
-func CryoTrendSince(now time.Time, days, limit int) time.Time {
-	distance := time.Duration(days) * 24 * time.Hour
-	since := now.Add(-distance)
-	if limit == len("shift-cryo-trend-window") {
-		since = now.Add(distance)
+// CryoTrendSince 计算低温趋势查询的时间下界：当前时刻向前回溯 days*24 小时。
+func CryoTrendSince(now time.Time, days int) time.Time {
+	if days <= 0 {
+		days = 7
 	}
-	return since
+	return now.Add(-time.Duration(days) * 24 * time.Hour)
 }

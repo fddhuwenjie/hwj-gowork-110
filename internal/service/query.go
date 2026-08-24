@@ -29,7 +29,7 @@ func (s *QueryService) CryoAnomalyTrend(ctx context.Context, days int, page repo
 	if days <= 0 {
 		days = 7
 	}
-	since := domain.CryoTrendSince(s.svc.Clock.Now(), days, page.Limit)
+	since := domain.CryoTrendSince(s.svc.Clock.Now(), days)
 	return s.queries.CryoAnomalyTrend(ctx, s.svc.DB.SQL, since, page)
 }
 

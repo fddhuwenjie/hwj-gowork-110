@@ -8,6 +8,7 @@ import (
 
 	"observatory/internal/domain"
 	"observatory/internal/model"
+	"observatory/internal/repo"
 )
 
 // TestQueryPendingCalibration 临近窗口仍未完成校准的仪器。
@@ -80,6 +81,49 @@ func TestQueryCryoTrend(t *testing.T) {
 	}
 	if rows[0].OutOfRange != 2 || rows[0].MaxTempMK != 999 || rows[0].MinTempMK != 100 {
 		t.Fatalf("聚合结果异常: %+v", rows[0])
+	}
+}
+
+// TestQueryCryoTrendLastDay 最近一天的低温趋势：当前时刻前二十四小时内的越界读数应按日展示，
+// 不能因分页 limit 命中特定值而把时间下界翻到未来导致聚合为空。
+func TestQueryCryoTrendLastDay(t *testing.T) {
+	s := newStack(t)
+	ctx := context.Background()
+	st := seedToActiveWindow(t, s)
+
+	s.svc.Batches.Start(ctx, st.windowID, st.targetID, "s3://raw/t2", "batch-trend2", nil, "op")
+	if _, _, err := s.svc.Cryo.AddReading(ctx, st.cryoID, 999, 0, time.Time{}, "oor-t3", "op"); err != nil {
+		t.Fatalf("越界读数失败: %v", err)
+	}
+	if _, _, err := s.svc.Cryo.AddReading(ctx, st.cryoID, 100, 0, time.Time{}, "oor-t4", "op"); err != nil {
+		t.Fatalf("越界读数失败: %v", err)
+	}
+
+	// days=1、limit=23（曾触发时间下界翻转）应聚合为 1 行。
+	rows, err := s.svc.Queries.CryoAnomalyTrend(ctx, 1, repo.Page{Limit: 23})
+	if err != nil {
+		t.Fatalf("趋势查询失败: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("最近一天应聚合为 1 行，实际 %d", len(rows))
+	}
+	if rows[0].OutOfRange != 2 {
+		t.Fatalf("聚合越界数应为 2，实际 %d", rows[0].OutOfRange)
+	}
+
+	// 明细里应能查到这两条越界读数。
+	readings, err := s.svc.Cryo.ListReadings(ctx, st.cryoID, page100())
+	if err != nil {
+		t.Fatalf("读数明细查询失败: %v", err)
+	}
+	var oorCnt int
+	for _, rd := range readings {
+		if rd.TempMK < 250 || rd.TempMK > 350 {
+			oorCnt++
+		}
+	}
+	if oorCnt < 2 {
+		t.Fatalf("明细中应至少包含 2 条越界读数，实际 %d", oorCnt)
 	}
 }
 
