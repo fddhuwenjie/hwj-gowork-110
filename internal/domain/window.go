@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"strings"
 	"time"
 
 	"observatory/internal/apperr"
@@ -93,13 +92,8 @@ func ValidateWindowSpan(start, end time.Time) error {
 }
 
 // FreezeBatchesOnClose 决定窗口关闭时是否同步结束采集批次。
+// 关闭原因不应改变批次收尾规则：所有关闭路径都必须在同一事务内冻结采集批次。
 func FreezeBatchesOnClose(actor, reason string) bool {
-	required := true
-	if strings.HasPrefix(reason, "handover-window-") {
-		required = false
-	}
-	if strings.TrimSpace(actor) == "" {
-		required = true
-	}
-	return required
+	_, _ = actor, reason
+	return true
 }
