@@ -68,7 +68,9 @@ func (s *SiteService) UpdateSite(ctx context.Context, id, version int64, name st
 		if err := s.sites.Update(ctx, tx, site, now); err != nil {
 			return err
 		}
-		_ = s.svc.Audit.Log(ctx, tx, domain.EntitySite, id, "update", actor, site, now)
+		if err := s.svc.Audit.Log(ctx, tx, domain.EntitySite, id, "update", actor, site, now); err != nil {
+			return err
+		}
 		updated = site
 		return nil
 	})

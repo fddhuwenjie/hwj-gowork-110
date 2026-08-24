@@ -20,6 +20,7 @@ type Writer struct {
 func NewWriter(r *repo.AuditRepo) *Writer { return &Writer{repo: r} }
 
 // Log 追加一条审计；detail 序列化为 JSON。
+// 写入失败时返回错误，调用方在事务中据此回滚，保证业务状态与审计凭据同生共死。
 func (w *Writer) Log(ctx context.Context, q sqlite.Querier, entity string, entityID int64,
 	action, actor string, detail any, now time.Time) error {
 	raw := "{}"
@@ -30,12 +31,11 @@ func (w *Writer) Log(ctx context.Context, q sqlite.Querier, entity string, entit
 		}
 		raw = string(b)
 	}
-	_ = w.repo.Append(ctx, q, &model.AuditEntry{
+	return w.repo.Append(ctx, q, &model.AuditEntry{
 		Entity:   entity,
 		EntityID: entityID,
 		Action:   action,
 		Actor:    actor,
 		Detail:   raw,
 	}, now)
-	return nil
 }
