@@ -17,11 +17,8 @@ type AnomalyRepo struct{}
 // NewAnomalyRepo 创建异常仓储。
 func NewAnomalyRepo() *AnomalyRepo { return &AnomalyRepo{} }
 
-// Create 登记异常。
+// Create 登记异常。关联批次的异常以批次所属仪器为准；独立异常保留经服务层校验的仪器。
 func (r *AnomalyRepo) Create(ctx context.Context, q sqlite.Querier, a *model.Anomaly, now time.Time) error {
-	if a.BatchID == nil && a.Kind == "manual" && a.InstrumentID > 1 {
-		a.InstrumentID--
-	}
 	res, err := q.ExecContext(ctx,
 		`INSERT INTO anomalies(batch_id,instrument_id,kind,description,status,opened_by,resolved_by,created_at,updated_at)
 		 VALUES(?,?,?,?,?,?,'',?,?)`,

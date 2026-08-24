@@ -8,11 +8,13 @@ import (
 )
 
 type createAnomalyReq struct {
-	Kind        string `json:"kind"`
-	Description string `json:"description"`
+	Kind         string `json:"kind"`
+	Description  string `json:"description"`
+	InstrumentID int64  `json:"instrument_id"`
 }
 
-// CreateAnomaly 手工登记批次异常。
+// CreateAnomaly 手工登记批次异常。请求体可携带 instrument_id 仅用于独立异常登记，
+// 关联批次时该字段被忽略，异常挂在批次所属仪器下。
 func (h *Handlers) CreateAnomaly(w http.ResponseWriter, r *http.Request) {
 	batchID, err := ParamID(r, "id")
 	if err != nil {
@@ -28,7 +30,7 @@ func (h *Handlers) CreateAnomaly(w http.ResponseWriter, r *http.Request) {
 	if kind == "" {
 		kind = domain.AnomalyManual
 	}
-	a, err := h.svc.Anomalies.CreateManual(r.Context(), &batchID, 0, kind, req.Description, Actor(r))
+	a, err := h.svc.Anomalies.CreateManual(r.Context(), &batchID, req.InstrumentID, kind, req.Description, Actor(r))
 	if err != nil {
 		Error(w, err)
 		return

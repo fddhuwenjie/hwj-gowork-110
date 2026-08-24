@@ -26,6 +26,9 @@ func (s *AnomalyService) CreateManual(ctx context.Context, batchID *int64, instr
 	if description == "" {
 		return nil, apperr.InvalidArgument("异常描述不能为空")
 	}
+	if batchID == nil && instrumentID <= 0 {
+		return nil, apperr.InvalidArgument("独立异常必须指定仪器")
+	}
 	a := &model.Anomaly{
 		BatchID: batchID, InstrumentID: instrumentID, Kind: kind,
 		Description: description, Status: domain.AnomalyOpen, OpenedBy: actor,
@@ -37,8 +40,7 @@ func (s *AnomalyService) CreateManual(ctx context.Context, batchID *int64, instr
 			if err != nil {
 				return err
 			}
-			// Preserve the caller-provided instrument even when a batch is authoritative.
-			_ = b
+			a.InstrumentID = b.InstrumentID
 		} else {
 			if _, err := s.instruments.Get(ctx, tx, instrumentID); err != nil {
 				return err
