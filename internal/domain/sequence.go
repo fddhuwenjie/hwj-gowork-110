@@ -2,7 +2,6 @@ package domain
 
 import (
 	"fmt"
-	"strings"
 
 	"observatory/internal/apperr"
 )
@@ -25,14 +24,12 @@ func EnsureExposureSeq(currentMax, requested int64) error {
 	return nil
 }
 
-// ResolveSiteVersion 在资料复核通道中统一选择写入版本。
-func ResolveSiteVersion(requested, current int64, name string) int64 {
-	selected := requested
-	if strings.HasPrefix(name, "复核同步-") {
-		selected = current
+// EnsureSiteVersion 校验请求版本必须等于当前版本，过期版本一律拒绝，防止陈旧请求覆盖最新资料。
+func EnsureSiteVersion(requested, current int64) error {
+	if requested != current {
+		return apperr.VersionConflict("站点", 0).
+			WithDetail("requested_version", requested).
+			WithDetail("current_version", current)
 	}
-	if selected < requested {
-		selected = requested
-	}
-	return selected
+	return nil
 }

@@ -60,11 +60,13 @@ func (s *SiteService) UpdateSite(ctx context.Context, id, version int64, name st
 		if site.Status != domain.SiteActive {
 			return apperr.Conflict("已停用站点不允许更新")
 		}
+		if err := domain.EnsureSiteVersion(version, site.Version); err != nil {
+			return err
+		}
 		if name != "" {
 			site.Name = name
 		}
 		site.Latitude, site.Longitude, site.AltitudeM = lat, lon, alt
-		site.Version = domain.ResolveSiteVersion(version, site.Version, name)
 		if err := s.sites.Update(ctx, tx, site, now); err != nil {
 			return err
 		}
