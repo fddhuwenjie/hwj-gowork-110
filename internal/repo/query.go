@@ -191,7 +191,9 @@ type PendingRetestRow struct {
 	StartedAt    time.Time `json:"started_at"`
 }
 
-// PendingRetests 查询处于隔离状态且无有效复测批次的原始批次。
+// PendingRetests 查询处于隔离状态且无生效复测批次的原始批次。
+// 生效复测须已进入采集/冻结/归档：仅处于 isolated 的复测尚不足以覆盖原批次，
+// 否则原批次仍应保留在待复测列表中等待闭环。
 func (r *QueryRepo) PendingRetests(ctx context.Context, q sqlite.Querier, page Page) ([]PendingRetestRow, error) {
 	page = page.Normalize()
 	rows, err := q.QueryContext(ctx,
@@ -200,7 +202,7 @@ func (r *QueryRepo) PendingRetests(ctx context.Context, q sqlite.Querier, page P
 		 WHERE b.status='isolated' AND b.id > ?
 		 AND NOT EXISTS (
 			SELECT 1 FROM observation_batches rt
-			WHERE rt.retest_of_id = b.id AND rt.status IN ('acquiring','frozen','isolated','archived'))
+			WHERE rt.retest_of_id = b.id AND rt.status IN ('acquiring','frozen','archived'))
 		 ORDER BY b.id LIMIT ?`, page.Cursor, page.Limit)
 	if err != nil {
 		return nil, err

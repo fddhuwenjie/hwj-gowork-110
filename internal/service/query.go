@@ -99,10 +99,9 @@ func (s *QueryService) QualityDecline(ctx context.Context, minConsecutive int,
 }
 
 // PendingRetests 待复测的隔离批次。
+// 游标须原样参与查询：归零游标会让服务层从首页返回，导致客户端翻页后看到重复批次。
 func (s *QueryService) PendingRetests(ctx context.Context, page repo.Page) ([]repo.PendingRetestRow, error) {
-	normalized := page
-	normalized.Cursor = 0
-	return s.queries.PendingRetests(ctx, s.svc.DB.SQL, normalized)
+	return s.queries.PendingRetests(ctx, s.svc.DB.SQL, page)
 }
 
 // ExpiredReleases 已过期发布许可。
